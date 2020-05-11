@@ -1,12 +1,10 @@
 package sample;
 
 import javafx.application.Application;
-import static javafx.application.Application.launch;
 import javafx.scene.Camera;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.transform.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Box;
@@ -28,7 +26,7 @@ public class Main extends Application {
     private final DoubleProperty angleY = new SimpleDoubleProperty(0);
 
     @Override
-    public void start(Stage primaryStage) throws Exception{
+    public void start(Stage primaryStage) {
 
         Box box = new Box(5, 5, 5);
         Box ground = new Box(500, 2, 500);
@@ -68,7 +66,7 @@ public class Main extends Application {
         camera.setFarClip(1000);
 
         //ruch i rotacja kamery
-        camera.getTransforms().addAll (
+        camera.getTransforms().addAll(
                 pivot,
                 yRotate,
                 new Rotate(-20, Rotate.X_AXIS),
@@ -77,9 +75,7 @@ public class Main extends Application {
 
         yRotate.angleProperty().bind(angleY);
 
-        scene.setOnMouseDragged(event -> {
-            angleY.set(event.getSceneX());
-        });
+        scene.setOnMouseDragged(event -> angleY.set(event.getSceneX()));
 
         primaryStage.setTitle("Ramię robota");
         primaryStage.setScene(scene);
