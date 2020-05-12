@@ -45,7 +45,7 @@ public class Main extends Application {
         model.translateYProperty().set(50);
 
         Camera camera = new PerspectiveCamera(true);
-        Scene scene = new Scene(group, WIDTH, HEIGHT);
+        Scene scene = new Scene(group,WIDTH, HEIGHT, true);
         scene.setFill(Color.SILVER);
         scene.setCamera(camera);
 
@@ -53,7 +53,7 @@ public class Main extends Application {
         Rotate yRotate = new Rotate(0, Rotate.Y_AXIS);
 
         box.translateXProperty().set(10);
-        box.translateYProperty().set(50);
+        box.translateYProperty().set(45);
         box.translateZProperty().set(0);
         box.setMaterial(redMaterial);
 
@@ -64,6 +64,7 @@ public class Main extends Application {
         //ustawienia kamery
         camera.setNearClip(1);
         camera.setFarClip(1000);
+
 
         //ruch i rotacja kamery
         camera.getTransforms().addAll(
