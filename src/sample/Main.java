@@ -23,6 +23,9 @@ public class Main extends Application {
     private static final int HEIGHT = 800;
 
     final PhongMaterial redMaterial = new PhongMaterial();
+
+    private double anchorX;
+    private double anchorAngleY = 0;
     private final DoubleProperty angleY = new SimpleDoubleProperty(0);
 
     @Override
@@ -31,7 +34,7 @@ public class Main extends Application {
         Box box = new Box(5, 5, 5);
         Box ground = new Box(500, 2, 500);
 
-        //wczytanie modelu
+        //wczytanie modelu robota
         Group model = loadModel(getClass().getResource("OBJ_Robot.obj"));
 
         redMaterial.setSpecularColor(Color.ORANGE);
@@ -49,14 +52,13 @@ public class Main extends Application {
         scene.setFill(Color.SILVER);
         scene.setCamera(camera);
 
-        Translate pivot = new Translate();
-        Rotate yRotate = new Rotate(0, Rotate.Y_AXIS);
-
+        //ustawienia pudełka (pozycja i kolor)
         box.translateXProperty().set(10);
         box.translateYProperty().set(45);
         box.translateZProperty().set(0);
         box.setMaterial(redMaterial);
 
+        //pozycja poziomu ziemi
         ground.translateXProperty().set(0);
         ground.translateYProperty().set(50);
         ground.translateZProperty().set(0);
@@ -65,18 +67,8 @@ public class Main extends Application {
         camera.setNearClip(1);
         camera.setFarClip(1000);
 
-
         //ruch i rotacja kamery
-        camera.getTransforms().addAll(
-                pivot,
-                yRotate,
-                new Rotate(-20, Rotate.X_AXIS),
-                new Translate(0, 0, -500)
-        );
-
-        yRotate.angleProperty().bind(angleY);
-
-        scene.setOnMouseDragged(event -> angleY.set(event.getSceneX()));
+        cameraControl(camera, scene);
 
         primaryStage.setTitle("Ramię robota");
         primaryStage.setScene(scene);
@@ -94,6 +86,29 @@ public class Main extends Application {
         }
 
         return modelRoot;
+    }
+
+    private void cameraControl(Camera camera, Scene scene) {
+
+        Translate pivot = new Translate();
+        Rotate yRotate = new Rotate(0, Rotate.Y_AXIS);
+
+        camera.getTransforms().addAll(
+                pivot,
+                yRotate,
+                new Rotate(-20, Rotate.X_AXIS),
+                new Translate(0, 0, -500)
+        );
+
+        yRotate.angleProperty().bind(angleY);
+
+        scene.setOnMousePressed(event -> {
+            anchorX = event.getSceneX();
+            anchorAngleY = angleY.get();
+        });
+
+        scene.setOnMouseDragged(event -> angleY.set(anchorAngleY + anchorX - event.getSceneX()));
+
     }
 
     public static void main(String[] args) {
