@@ -13,7 +13,11 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.shape.MeshView;
+import javafx.animation.*;
 import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
+import javafx.util.Duration;
+import java.lang.Math;
+
 import java.net.URL;
 
 
@@ -21,6 +25,7 @@ public class Main extends Application {
 
     private static final int WIDTH = 1400;
     private static final int HEIGHT = 800;
+    private static final double GROUND_LEVEL = 50;
 
     final PhongMaterial redMaterial = new PhongMaterial();
 
@@ -53,14 +58,14 @@ public class Main extends Application {
         scene.setCamera(camera);
 
         //ustawienia pudełka (pozycja i kolor)
-        box.translateXProperty().set(10);
-        box.translateYProperty().set(45);
+        box.translateXProperty().set(-10);
+        box.translateYProperty().set(-10);
         box.translateZProperty().set(0);
         box.setMaterial(redMaterial);
 
         //pozycja poziomu ziemi
         ground.translateXProperty().set(0);
-        ground.translateYProperty().set(50);
+        ground.translateYProperty().set(GROUND_LEVEL);
         ground.translateZProperty().set(0);
 
         //ustawienia kamery
@@ -69,6 +74,8 @@ public class Main extends Application {
 
         //ruch i rotacja kamery
         cameraControl(camera, scene);
+
+        gravityAnimation(box);
 
         primaryStage.setTitle("Ramię robota");
         primaryStage.setScene(scene);
@@ -108,6 +115,25 @@ public class Main extends Application {
         });
 
         scene.setOnMouseDragged(event -> angleY.set(anchorAngleY + anchorX - event.getSceneX()));
+
+    }
+
+    private void gravityAnimation(Box box) {
+
+        double movementDistance;
+        double endPoint;
+        double movementTime;
+
+        endPoint = GROUND_LEVEL - 3;
+        movementDistance = endPoint - box.getTranslateY();
+        movementTime = Math.sqrt(2*movementDistance*0.1/9.81); //jedna jednostka 10 cm
+
+        final Timeline timeline = new Timeline();
+        final KeyValue kv = new KeyValue(box.translateYProperty(), endPoint,
+                Interpolator.LINEAR);
+        final KeyFrame kf = new KeyFrame(Duration.seconds(movementTime), kv);
+        timeline.getKeyFrames().add(kf);
+        timeline.play();
 
     }
 
