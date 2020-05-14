@@ -36,7 +36,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
 
-        Box box = new Box(5, 5, 5);
+        Box box = new Box(1, 100, 1);
         Box ground = new Box(500, 2, 500);
 
         //wczytanie modelu robota
@@ -46,11 +46,13 @@ public class Main extends Application {
         redMaterial.setDiffuseColor(Color.RED);
 
         Group group = new Group();
+        group.getChildren().add(model);
         group.getChildren().add(ground);
         group.getChildren().add(box);
-        group.getChildren().add(model);
 
+        model.translateXProperty().set(0);
         model.translateYProperty().set(50);
+        model.translateZProperty().set(0);
 
         Camera camera = new PerspectiveCamera(true);
         Scene scene = new Scene(group,WIDTH, HEIGHT, true);
@@ -58,8 +60,8 @@ public class Main extends Application {
         scene.setCamera(camera);
 
         //ustawienia pudełka (pozycja i kolor)
-        box.translateXProperty().set(-10);
-        box.translateYProperty().set(-10);
+        box.translateXProperty().set(0);
+        box.translateYProperty().set(40);
         box.translateZProperty().set(0);
         box.setMaterial(redMaterial);
 
@@ -74,6 +76,8 @@ public class Main extends Application {
 
         //ruch i rotacja kamery
         cameraControl(camera, scene);
+
+        animate(model);
 
         gravityAnimation(box);
 
@@ -135,6 +139,39 @@ public class Main extends Application {
         timeline.getKeyFrames().add(kf);
         timeline.play();
 
+    }
+
+    private void animate(Group model) {
+
+        /*Przesunąłem model względem punktu 0 0, poprawiłem to w programie do obróbki 3d.
+        Nowy model (ten już który był w 0 0), nie chciał się zaimportować, bo miał też jakieś domyślne tekstury
+        w pliku .mtl, którego nie mogłem znaleźć. Poprawiłem to w .obj (usunąłem odwołania do tych tekstur),
+        ale był problem z tymi częściami bo były inaczej oznaczone. Może później to ogarnę bo tekstury w sumie też
+        się przydadzą.
+        Teraz co jest poniżej (i działa) to jest po prostu przesunięcie osi obrotu, wartości te znalazłem w tym programie
+        do 3d, przesuwając model żeby był na środku, co było upierdliwe bo nie jest symetryczny (probowałem
+        żeby oś była w połowie szerokości i długości, ale nadal była przesunięta).
+        Pewnie będzie problem z szukaniem następnych osi obrotu, więc jak to Ci się nie uda, to zrób żeby ten obrót
+        co jest można było sterować klawiaturą np. A i D.
+
+         */
+        Rotate rotation = new Rotate(0, Rotate.Y_AXIS);
+        rotation.pivotXProperty().set(16.212); //ustawienie wartości X osi obrotu
+        rotation.pivotZProperty().set(-18.481); //ustawienie wartości Z osi obrotu
+
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().equals("Robot_Head__Axis_1_"))
+                .forEach(view -> {
+
+                    view.getTransforms().add(rotation);
+                    Timeline timeline = new Timeline(
+                            new KeyFrame(Duration.ZERO, new KeyValue(rotation.angleProperty(), 0)),
+                            new KeyFrame(Duration.seconds(2), new KeyValue(rotation.angleProperty(), 360)));
+                    timeline.setCycleCount(100);
+                    timeline.play();
+
+                });
     }
 
     public static void main(String[] args) {
