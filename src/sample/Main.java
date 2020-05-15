@@ -18,6 +18,7 @@ import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
 import javafx.util.Duration;
 import java.lang.Math;
 
+
 import java.net.URL;
 
 
@@ -77,7 +78,8 @@ public class Main extends Application {
         //ruch i rotacja kamery
         cameraControl(camera, scene);
 
-        animate(model);
+        //obrót robota wokół własnej osi
+        rotateRobot(scene, model);
 
         gravityAnimation(box);
 
@@ -122,6 +124,34 @@ public class Main extends Application {
 
     }
 
+    private void rotateRobot(Scene scene, Group model) {
+
+        Rotate rotation = new Rotate(0, Rotate.Y_AXIS);
+
+        rotation.pivotXProperty().set(16.212); //ustawienie wartości X osi obrotu
+        rotation.pivotZProperty().set(-18.481); //ustawienie wartości Z osi obrotu
+        rotation.setAngle(0);
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().equals("Robot_Head__Axis_1_"))
+                .forEach(view -> scene.setOnKeyPressed(event -> {
+                    switch (event.getCode()) {
+                        case LEFT:
+                            rotation.setAngle(rotation.getAngle() - 5);
+                            view.getTransforms().remove(rotation);
+                            view.getTransforms().add(rotation);
+                            break;
+                        case RIGHT:
+                            rotation.setAngle(rotation.getAngle() + 5);
+                            view.getTransforms().remove(rotation);
+                            view.getTransforms().add(rotation);
+                            break;
+                    }
+                }));
+
+
+    }
+
     private void gravityAnimation(Box box) {
 
         double movementDistance;
@@ -141,41 +171,8 @@ public class Main extends Application {
 
     }
 
-    private void animate(Group model) {
-
-        /*Przesunąłem model względem punktu 0 0, poprawiłem to w programie do obróbki 3d.
-        Nowy model (ten już który był w 0 0), nie chciał się zaimportować, bo miał też jakieś domyślne tekstury
-        w pliku .mtl, którego nie mogłem znaleźć. Poprawiłem to w .obj (usunąłem odwołania do tych tekstur),
-        ale był problem z tymi częściami bo były inaczej oznaczone. Może później to ogarnę bo tekstury w sumie też
-        się przydadzą.
-        Teraz co jest poniżej (i działa) to jest po prostu przesunięcie osi obrotu, wartości te znalazłem w tym programie
-        do 3d, przesuwając model żeby był na środku, co było upierdliwe bo nie jest symetryczny (probowałem
-        żeby oś była w połowie szerokości i długości, ale nadal była przesunięta).
-        Pewnie będzie problem z szukaniem następnych osi obrotu, więc jak to Ci się nie uda, to zrób żeby ten obrót
-        co jest można było sterować klawiaturą np. A i D.
-
-         */
-        Rotate rotation = new Rotate(0, Rotate.Y_AXIS);
-        rotation.pivotXProperty().set(16.212); //ustawienie wartości X osi obrotu
-        rotation.pivotZProperty().set(-18.481); //ustawienie wartości Z osi obrotu
-
-        model.getChildren()
-                .stream()
-                .filter(view -> view.getId().equals("Robot_Head__Axis_1_"))
-                .forEach(view -> {
-
-                    view.getTransforms().add(rotation);
-                    Timeline timeline = new Timeline(
-                            new KeyFrame(Duration.ZERO, new KeyValue(rotation.angleProperty(), 0)),
-                            new KeyFrame(Duration.seconds(2), new KeyValue(rotation.angleProperty(), 360)));
-                    timeline.setCycleCount(100);
-                    timeline.play();
-
-                });
-    }
 
     public static void main(String[] args) {
         launch(args);
     }
 }
-
