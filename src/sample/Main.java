@@ -1,10 +1,8 @@
 package sample;
 
 import javafx.application.Application;
-import javafx.scene.Camera;
-import javafx.scene.Group;
-import javafx.scene.PerspectiveCamera;
-import javafx.scene.Scene;
+import javafx.geometry.Point3D;
+import javafx.scene.*;
 import javafx.scene.transform.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Box;
@@ -17,8 +15,6 @@ import javafx.animation.*;
 import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
 import javafx.util.Duration;
 import java.lang.Math;
-
-
 import java.net.URL;
 
 
@@ -56,7 +52,7 @@ public class Main extends Application {
         model.translateZProperty().set(0);
 
         Camera camera = new PerspectiveCamera(true);
-        Scene scene = new Scene(group,WIDTH, HEIGHT, true);
+        Scene scene = new Scene(group,WIDTH, HEIGHT, true, SceneAntialiasing.BALANCED);
         scene.setFill(Color.SILVER);
         scene.setCamera(camera);
 
@@ -78,8 +74,8 @@ public class Main extends Application {
         //ruch i rotacja kamery
         cameraControl(camera, scene);
 
-        //obrót robota wokół własnej osi
-        rotateRobot(scene, model);
+        //wejścia z klawiatury
+        keyboardInputHandler(scene, model);
 
         gravityAnimation(box);
 
@@ -124,39 +120,73 @@ public class Main extends Application {
 
     }
 
-    private void rotateRobot(Scene scene, Group model) {
+    private void keyboardInputHandler(Scene scene, Group model) {
+
+        scene.setOnKeyPressed(event -> {
+            switch (event.getCode()) {
+                case LEFT:
+                    rotateRobot(model, -5);
+                    break;
+                case RIGHT:
+                    rotateRobot(model, 5);
+                    break;
+                case UP:
+                    rotateRobotUpDown(model, 5);
+                    break;
+                case DOWN:
+                    rotateRobotUpDown(model, -5);
+                    break;
+            }
+        });
+
+    }
+
+    private void rotateRobot(Group model, int direction) {
 
         Rotate rotation = new Rotate(0, Rotate.Y_AXIS);
 
-        rotation.pivotXProperty().set(16.212); //ustawienie wartości X osi obrotu
-        rotation.pivotZProperty().set(-18.481); //ustawienie wartości Z osi obrotu
+        rotation.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
+        rotation.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
         rotation.setAngle(0);
 
         model.getChildren()
                 .stream()
-                .filter(view -> view.getId().equals("Robot_Head__Axis_1_"))
-                .forEach(view -> scene.setOnKeyPressed(event -> {
-                    switch (event.getCode()) {
-                        case LEFT:
-                            view.getTransforms().remove(rotation);
-                            Timeline timelineLeft = new Timeline();
-                            KeyValue kvLeft = new KeyValue(rotation.angleProperty(), rotation.getAngle()-5);
-                            KeyFrame kfLeft = new KeyFrame(Duration.seconds(0.1), kvLeft);
-                            timelineLeft.getKeyFrames().add(kfLeft);
-                            timelineLeft.play();
-                            view.getTransforms().add(rotation);
-                            break;
-                        case RIGHT:
-                            view.getTransforms().remove(rotation);
-                            Timeline timelineRight = new Timeline();
-                            KeyValue kvRight = new KeyValue(rotation.angleProperty(), rotation.getAngle()+5);
-                            KeyFrame kfRight = new KeyFrame(Duration.seconds(0.1), kvRight);
-                            timelineRight.getKeyFrames().add(kfRight);
-                            timelineRight.play();
-                            view.getTransforms().add(rotation);
-                            break;
-                    }
-                }));
+                .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_"))
+                .forEach(view -> {
+                    view.getTransforms().remove(rotation);
+                    Timeline timeline = new Timeline();
+                    KeyValue kv = new KeyValue(rotation.angleProperty(), rotation.getAngle()+direction);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    timeline.getKeyFrames().add(kf);
+                    timeline.play();
+                    view.getTransforms().add(rotation);
+                });
+    }
+
+    private void rotateRobotUpDown(Group model, int direction) {
+
+        //do poprawy- ustawienie osi obrotu
+        Point3D axis = new Point3D(16.3, 0, -18.55);
+
+        Rotate rotation = new Rotate(0, axis);
+
+        rotation.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
+        rotation.pivotYProperty().set(-24.98); //ustawienie wartości Y osi obrotu
+        rotation.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
+        rotation.setAngle(0);
+
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_"))
+                .forEach(view -> {
+                    view.getTransforms().remove(rotation);
+                    Timeline timeline = new Timeline();
+                    KeyValue kv = new KeyValue(rotation.angleProperty(), rotation.getAngle()+direction);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    timeline.getKeyFrames().add(kf);
+                    timeline.play();
+                    view.getTransforms().add(rotation);
+                });
     }
 
     private void gravityAnimation(Box box) {
