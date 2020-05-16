@@ -37,7 +37,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
 
-        Box box = new Box(1, 100, 1);
+        Box box = new Box(5, 5, 5);
         Box ground = new Box(500, 2, 500);
 
         //wczytanie modelu robota
@@ -62,7 +62,7 @@ public class Main extends Application {
 
         //ustawienia pudełka (pozycja i kolor)
         box.translateXProperty().set(0);
-        box.translateYProperty().set(40);
+        box.translateYProperty().set(-100);
         box.translateZProperty().set(0);
         box.setMaterial(redMaterial);
 
@@ -131,25 +131,32 @@ public class Main extends Application {
         rotation.pivotXProperty().set(16.212); //ustawienie wartości X osi obrotu
         rotation.pivotZProperty().set(-18.481); //ustawienie wartości Z osi obrotu
         rotation.setAngle(0);
+
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().equals("Robot_Head__Axis_1_"))
                 .forEach(view -> scene.setOnKeyPressed(event -> {
                     switch (event.getCode()) {
                         case LEFT:
-                            rotation.setAngle(rotation.getAngle() - 5);
                             view.getTransforms().remove(rotation);
+                            Timeline timelineLeft = new Timeline();
+                            KeyValue kvLeft = new KeyValue(rotation.angleProperty(), rotation.getAngle()-5);
+                            KeyFrame kfLeft = new KeyFrame(Duration.seconds(0.1), kvLeft);
+                            timelineLeft.getKeyFrames().add(kfLeft);
+                            timelineLeft.play();
                             view.getTransforms().add(rotation);
                             break;
                         case RIGHT:
-                            rotation.setAngle(rotation.getAngle() + 5);
                             view.getTransforms().remove(rotation);
+                            Timeline timelineRight = new Timeline();
+                            KeyValue kvRight = new KeyValue(rotation.angleProperty(), rotation.getAngle()+5);
+                            KeyFrame kfRight = new KeyFrame(Duration.seconds(0.1), kvRight);
+                            timelineRight.getKeyFrames().add(kfRight);
+                            timelineRight.play();
                             view.getTransforms().add(rotation);
                             break;
                     }
                 }));
-
-
     }
 
     private void gravityAnimation(Box box) {
@@ -166,6 +173,7 @@ public class Main extends Application {
         final KeyValue kv = new KeyValue(box.translateYProperty(), endPoint,
                 Interpolator.LINEAR);
         final KeyFrame kf = new KeyFrame(Duration.seconds(movementTime), kv);
+        //timeline.setCycleCount(10); //test
         timeline.getKeyFrames().add(kf);
         timeline.play();
 
