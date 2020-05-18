@@ -33,7 +33,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
 
-        Box box = new Box(5, 5, 5);
+        Box box = new Box(1, 1, 1);
         Box ground = new Box(500, 2, 500);
 
         //wczytanie modelu robota
@@ -58,7 +58,7 @@ public class Main extends Application {
 
         //ustawienia pudełka (pozycja i kolor)
         box.translateXProperty().set(0);
-        box.translateYProperty().set(-100);
+        box.translateYProperty().set(GROUND_LEVEL-4);
         box.translateZProperty().set(0);
         box.setMaterial(redMaterial);
 
@@ -146,6 +146,7 @@ public class Main extends Application {
         Rotate rotation = new Rotate(0, Rotate.Y_AXIS);
 
         rotation.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
+        rotation.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
         rotation.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
         rotation.setAngle(0);
 
@@ -165,13 +166,13 @@ public class Main extends Application {
 
     private void rotateRobotUpDown(Group model, int direction) {
 
-        //do poprawy- ustawienie osi obrotu
-        Point3D axis = new Point3D(16.3, 0, -18.55);
+        //ustawienie osi obrotu
+        Point3D axis = new Point3D(1, 0, -0.6925); //wartość Z to tg(34), obrót o 34 stopnie osi obrotu
 
         Rotate rotation = new Rotate(0, axis);
 
         rotation.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
-        rotation.pivotYProperty().set(-24.98); //ustawienie wartości Y osi obrotu
+        rotation.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
         rotation.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
         rotation.setAngle(0);
 
