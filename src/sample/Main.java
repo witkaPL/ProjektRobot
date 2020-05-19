@@ -30,6 +30,13 @@ public class Main extends Application {
     private double anchorAngleY = 0;
     private final DoubleProperty angleY = new SimpleDoubleProperty(0);
 
+    //ustawienie osi obrotu
+    //wartość Z to tg(34), obrót o 34 stopnie osi obrotu
+    private final Point3D axisUpDown = new Point3D(1, 0, -Math.tan(Math.toRadians(33.581)));
+
+    private final Rotate rotationUpDown = new Rotate(0, axisUpDown);
+    private final Rotate rotationLeftRight = new Rotate(0, Rotate.Y_AXIS);
+
     @Override
     public void start(Stage primaryStage) {
 
@@ -125,10 +132,10 @@ public class Main extends Application {
         scene.setOnKeyPressed(event -> {
             switch (event.getCode()) {
                 case LEFT:
-                    rotateRobot(model, -5);
+                    rotateRobotLeftRight(model, -5);
                     break;
                 case RIGHT:
-                    rotateRobot(model, 5);
+                    rotateRobotLeftRight(model, 5);
                     break;
                 case UP:
                     rotateRobotUpDown(model, 5);
@@ -141,53 +148,50 @@ public class Main extends Application {
 
     }
 
-    private void rotateRobot(Group model, int direction) {
+    private void rotateRobotLeftRight(Group model, int direction) {
 
-        Rotate rotation = new Rotate(0, Rotate.Y_AXIS);
-
-        rotation.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
-        rotation.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
-        rotation.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
-        rotation.setAngle(0);
+        rotationLeftRight.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
+        rotationLeftRight.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
+        rotationLeftRight.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
 
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_"))
                 .forEach(view -> {
-                    view.getTransforms().remove(rotation);
+                    view.getTransforms().remove(rotationUpDown);
+                    view.getTransforms().remove(rotationLeftRight);
                     Timeline timeline = new Timeline();
-                    KeyValue kv = new KeyValue(rotation.angleProperty(), rotation.getAngle()+direction);
+                    KeyValue kv = new KeyValue(rotationLeftRight.angleProperty(), rotationLeftRight.getAngle() + direction);
                     KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
-                    view.getTransforms().add(rotation);
+                    view.getTransforms().add(rotationLeftRight);
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_")) {
+                        view.getTransforms().add(rotationUpDown);
+                    }
                 });
     }
 
+
     private void rotateRobotUpDown(Group model, int direction) {
 
-        //ustawienie osi obrotu
-        Point3D axis = new Point3D(1, 0, -0.6925); //wartość Z to tg(34), obrót o 34 stopnie osi obrotu
-
-        Rotate rotation = new Rotate(0, axis);
-
-        rotation.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
-        rotation.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
-        rotation.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
-        rotation.setAngle(0);
+        rotationUpDown.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
+        rotationUpDown.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
+        rotationUpDown.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
 
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_"))
                 .forEach(view -> {
-                    view.getTransforms().remove(rotation);
+                    view.getTransforms().remove(rotationUpDown);
                     Timeline timeline = new Timeline();
-                    KeyValue kv = new KeyValue(rotation.angleProperty(), rotation.getAngle()+direction);
+                    KeyValue kv = new KeyValue(rotationUpDown.angleProperty(), rotationUpDown.getAngle() + direction);
                     KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
-                    view.getTransforms().add(rotation);
+                    view.getTransforms().add(rotationUpDown);
                 });
+
     }
 
     private void gravityAnimation(Box box) {
