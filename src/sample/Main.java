@@ -33,14 +33,18 @@ public class Main extends Application {
     //ustawienie osi obrotu
     //wartość Z to tg(34), obrót o 34 stopnie osi obrotu
     private final Point3D axisUpDown = new Point3D(1, 0, -Math.tan(Math.toRadians(33.581)));
+    private final Point3D axisOpenClose = new Point3D(1, 0, -Math.tan(Math.toRadians(123.581)));
 
     private final Rotate rotationUpDown = new Rotate(0, axisUpDown);
+    private final Rotate rotationUpDownPivot2 = new Rotate(0, axisUpDown);
     private final Rotate rotationLeftRight = new Rotate(0, Rotate.Y_AXIS);
+    private final Rotate rotationCloseOpenL = new Rotate(0, axisOpenClose);
+    private final Rotate rotationCloseOpenR = new Rotate(0, axisOpenClose);
 
     @Override
     public void start(Stage primaryStage) {
 
-        Box box = new Box(1, 1, 1);
+        Box box = new Box(5, 5, 5);
         Box ground = new Box(500, 2, 500);
 
         //wczytanie modelu robota
@@ -138,10 +142,26 @@ public class Main extends Application {
                     rotateRobotLeftRight(model, 5);
                     break;
                 case UP:
-                    rotateRobotUpDown(model, 5);
+                    //if(rotationUpDown.getAngle()<20)
+                        rotateRobotUpDown(model, 5);
                     break;
                 case DOWN:
-                    rotateRobotUpDown(model, -5);
+                    //if(rotationUpDown.getAngle()>-70)
+                        rotateRobotUpDown(model, -5);
+                    break;
+                case W:
+                    rotateRobotUpDownPivot2(model, 5);
+                    break;
+                case S:
+                    rotateRobotUpDownPivot2(model, -5);
+                    break;
+                case A:
+                    rotateGripperCloseOpenL(model, 5);
+                    rotateGripperCloseOpenR(model, -5);
+                    break;
+                case D:
+                    rotateGripperCloseOpenL(model, -5);
+                    rotateGripperCloseOpenR(model, 5);
                     break;
             }
         });
@@ -159,15 +179,28 @@ public class Main extends Application {
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_"))
                 .forEach(view -> {
                     view.getTransforms().remove(rotationUpDown);
+                    view.getTransforms().remove(rotationUpDownPivot2);
                     view.getTransforms().remove(rotationLeftRight);
+                    view.getTransforms().remove(rotationCloseOpenL);
+                    view.getTransforms().remove(rotationCloseOpenR);
                     Timeline timeline = new Timeline();
                     KeyValue kv = new KeyValue(rotationLeftRight.angleProperty(), rotationLeftRight.getAngle() + direction);
                     KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
                     view.getTransforms().add(rotationLeftRight);
+                    //zapobiega złemu obrotowi pozostałych części robota
                     if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_")) {
                         view.getTransforms().add(rotationUpDown);
+                    }
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_")) {
+                        view.getTransforms().add(rotationUpDownPivot2);
+                    }
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_L")) {
+                        view.getTransforms().add(rotationCloseOpenL);
+                    }
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_R")) {
+                        view.getTransforms().add(rotationCloseOpenR);
                     }
                 });
     }
@@ -184,15 +217,97 @@ public class Main extends Application {
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_"))
                 .forEach(view -> {
                     view.getTransforms().remove(rotationUpDown);
+                    view.getTransforms().remove(rotationUpDownPivot2);
+                    view.getTransforms().remove(rotationCloseOpenL);
+                    view.getTransforms().remove(rotationCloseOpenR);
                     Timeline timeline = new Timeline();
                     KeyValue kv = new KeyValue(rotationUpDown.angleProperty(), rotationUpDown.getAngle() + direction);
                     KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
                     view.getTransforms().add(rotationUpDown);
+                    //zapobiega złemu obrotowi pozostałych części robota
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_")) {
+                        view.getTransforms().add(rotationUpDownPivot2);
+                    }
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_L")) {
+                        view.getTransforms().add(rotationCloseOpenL);
+                    }
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_R")) {
+                        view.getTransforms().add(rotationCloseOpenR);
+                    }
                 });
 
     }
+
+    private void rotateRobotUpDownPivot2(Group model, int direction) {
+
+        rotationUpDownPivot2.pivotXProperty().set(30.1); //ustawienie wartości X osi obrotu
+        rotationUpDownPivot2.pivotYProperty().set(-43.2); //ustawienie wartości Y osi obrotu
+        rotationUpDownPivot2.pivotZProperty().set(-14.35); //ustawienie wartości Z osi obrotu
+
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_"))
+                .forEach(view -> {
+                    view.getTransforms().remove(rotationUpDownPivot2);
+                    view.getTransforms().remove(rotationCloseOpenL);
+                    view.getTransforms().remove(rotationCloseOpenR);
+                    Timeline timeline = new Timeline();
+                    KeyValue kv = new KeyValue(rotationUpDownPivot2.angleProperty(), rotationUpDownPivot2.getAngle() + direction);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    timeline.getKeyFrames().add(kf);
+                    timeline.play();
+                    view.getTransforms().add(rotationUpDownPivot2);
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_L")) {
+                        view.getTransforms().add(rotationCloseOpenL);
+                    }
+                    if(view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_R")) {
+                        view.getTransforms().add(rotationCloseOpenR);
+                    }
+                });
+    }
+
+    private void rotateGripperCloseOpenL(Group model, int direction) {
+
+        rotationCloseOpenL.pivotXProperty().set(2.659); //ustawienie wartości X osi obrotu
+        rotationCloseOpenL.pivotYProperty().set(-18.02); //ustawienie wartości Y osi obrotu
+        rotationCloseOpenL.pivotZProperty().set(-38.91); //ustawienie wartości Z osi obrotu
+
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().equals("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_L"))
+                .forEach(view -> {
+                    view.getTransforms().remove(rotationCloseOpenL);
+                    Timeline timeline = new Timeline();
+                    KeyValue kv = new KeyValue(rotationCloseOpenL.angleProperty(), rotationCloseOpenL.getAngle() + direction);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    timeline.getKeyFrames().add(kf);
+                    timeline.play();
+                    view.getTransforms().add(rotationCloseOpenL);
+                });
+    }
+
+    private void rotateGripperCloseOpenR(Group model, int direction) {
+
+        rotationCloseOpenR.pivotXProperty().set(0.459); //ustawienie wartości X osi obrotu
+        rotationCloseOpenR.pivotYProperty().set(-18.02); //ustawienie wartości Y osi obrotu
+        rotationCloseOpenR.pivotZProperty().set(-38.91); //ustawienie wartości Z osi obrotu
+
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().equals("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_R"))
+                .forEach(view -> {
+                    view.getTransforms().remove(rotationCloseOpenR);
+                    Timeline timeline = new Timeline();
+                    KeyValue kv = new KeyValue(rotationCloseOpenR.angleProperty(), rotationCloseOpenR.getAngle() + direction);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    timeline.getKeyFrames().add(kf);
+                    timeline.play();
+                    view.getTransforms().add(rotationCloseOpenR);
+                });
+    }
+
 
     private void gravityAnimation(Box box) {
 
