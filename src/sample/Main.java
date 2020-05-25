@@ -41,10 +41,14 @@ public class Main extends Application {
     private final Rotate rotationCloseOpenL = new Rotate(0, axisOpenClose);
     private final Rotate rotationCloseOpenR = new Rotate(0, axisOpenClose);
 
+    private final Box box = new Box(5, 5, 5);
+
+    private boolean didCollide = false;
+
     @Override
     public void start(Stage primaryStage) {
 
-        Box box = new Box(5, 5, 5);
+
         Box ground = new Box(500, 2, 500);
 
         //wczytanie modelu robota
@@ -89,6 +93,8 @@ public class Main extends Application {
         keyboardInputHandler(scene, model);
 
         gravityAnimation(box);
+
+        //checkCollision(model, box);
 
         primaryStage.setTitle("Ramię robota");
         primaryStage.setScene(scene);
@@ -137,31 +143,39 @@ public class Main extends Application {
             switch (event.getCode()) {
                 case LEFT:
                     rotateRobotLeftRight(model, -5);
+                    moveBox(model, box);
                     break;
                 case RIGHT:
                     rotateRobotLeftRight(model, 5);
+                    moveBox(model, box);
                     break;
                 case UP:
                     //if(rotationUpDown.getAngle()<20)
-                        rotateRobotUpDown(model, 5);
+                    rotateRobotUpDown(model, 5);
+                    moveBox(model, box);
                     break;
                 case DOWN:
                     //if(rotationUpDown.getAngle()>-70)
-                        rotateRobotUpDown(model, -5);
+                    rotateRobotUpDown(model, -5);
+                    moveBox(model, box);
                     break;
                 case W:
                     rotateRobotUpDownPivot2(model, 5);
+                    moveBox(model, box);
                     break;
                 case S:
                     rotateRobotUpDownPivot2(model, -5);
+                    moveBox(model, box);
                     break;
                 case A:
                     rotateGripperCloseOpenL(model, 5);
                     rotateGripperCloseOpenR(model, -5);
+                    checkCollision(model, box);
                     break;
                 case D:
                     rotateGripperCloseOpenL(model, -5);
                     rotateGripperCloseOpenR(model, 5);
+                    checkCollision(model, box);
                     break;
             }
         });
@@ -306,6 +320,37 @@ public class Main extends Application {
                     timeline.play();
                     view.getTransforms().add(rotationCloseOpenR);
                 });
+    }
+
+    private void checkCollision(Group model, Box box) {
+
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper"))
+                .forEach(view -> {
+                    if(box.intersects(view.getBoundsInParent())) {
+                        System.out.println("YEP!");
+                        didCollide = true;
+                    }
+                    else {
+                        gravityAnimation(box);
+                        didCollide = false;
+                    }
+                });
+    }
+
+    private void moveBox(Group model, Box box) {
+
+        if(didCollide) {
+            model.getChildren()
+                    .stream()
+                    .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper"))
+                    .forEach(view -> {
+                        box.translateXProperty().set(view.getBoundsInParent().getCenterX());
+                        box.translateYProperty().set(view.getBoundsInParent().getCenterY()+GROUND_LEVEL);
+                        box.translateZProperty().set(view.getBoundsInParent().getCenterZ());
+                    });
+        }
     }
 
 
