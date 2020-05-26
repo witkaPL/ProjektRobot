@@ -62,10 +62,6 @@ public class Main extends Application {
         group.getChildren().add(ground);
         group.getChildren().add(box);
 
-        model.translateXProperty().set(0);
-        model.translateYProperty().set(50);
-        model.translateZProperty().set(0);
-
         Camera camera = new PerspectiveCamera(true);
         Scene scene = new Scene(group,WIDTH, HEIGHT, true, SceneAntialiasing.BALANCED);
         scene.setFill(Color.SILVER);
@@ -76,6 +72,7 @@ public class Main extends Application {
         box.translateYProperty().set(GROUND_LEVEL-4);
         box.translateZProperty().set(0);
         box.setMaterial(redMaterial);
+        box.setManaged(false);
 
         //pozycja poziomu ziemi
         ground.translateXProperty().set(0);
@@ -92,10 +89,6 @@ public class Main extends Application {
         //wejścia z klawiatury
         keyboardInputHandler(scene, model);
 
-        gravityAnimation(box);
-
-        //checkCollision(model, box);
-
         primaryStage.setTitle("Ramię robota");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -108,6 +101,9 @@ public class Main extends Application {
         importer.read(url);
 
         for (MeshView view : importer.getImport()) {
+            view.translateXProperty().set(0);
+            view.translateYProperty().set(GROUND_LEVEL);
+            view.translateZProperty().set(0);
             modelRoot.getChildren().add(view);
         }
 
@@ -143,39 +139,41 @@ public class Main extends Application {
             switch (event.getCode()) {
                 case LEFT:
                     rotateRobotLeftRight(model, -5);
-                    moveBox(model, box);
+                    moveBox(model);
                     break;
                 case RIGHT:
                     rotateRobotLeftRight(model, 5);
-                    moveBox(model, box);
+                    moveBox(model);
                     break;
                 case UP:
                     //if(rotationUpDown.getAngle()<20)
                     rotateRobotUpDown(model, 5);
-                    moveBox(model, box);
+                    moveBox(model);
                     break;
                 case DOWN:
                     //if(rotationUpDown.getAngle()>-70)
                     rotateRobotUpDown(model, -5);
-                    moveBox(model, box);
+                    moveBox(model);
                     break;
                 case W:
                     rotateRobotUpDownPivot2(model, 5);
-                    moveBox(model, box);
+                    moveBox(model);
                     break;
                 case S:
                     rotateRobotUpDownPivot2(model, -5);
-                    moveBox(model, box);
+                    moveBox(model);
                     break;
                 case A:
                     rotateGripperCloseOpenL(model, 5);
                     rotateGripperCloseOpenR(model, -5);
-                    checkCollision(model, box);
+                    moveBox(model);
+                    checkCollision(model);
                     break;
                 case D:
                     rotateGripperCloseOpenL(model, -5);
                     rotateGripperCloseOpenR(model, 5);
-                    checkCollision(model, box);
+                    moveBox(model);
+                    checkCollision(model);
                     break;
             }
         });
@@ -322,14 +320,14 @@ public class Main extends Application {
                 });
     }
 
-    private void checkCollision(Group model, Box box) {
+    private void checkCollision(Group model) {
 
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper"))
                 .forEach(view -> {
-                    if(box.intersects(view.getBoundsInParent())) {
-                        System.out.println("YEP!");
+                    if(box.getBoundsInParent().intersects(view.getBoundsInParent())) {
+                       //System.out.println("YEP!");
                         didCollide = true;
                     }
                     else {
@@ -339,16 +337,20 @@ public class Main extends Application {
                 });
     }
 
-    private void moveBox(Group model, Box box) {
+    private void moveBox(Group model) {
+
+        TranslateTransition boxMovement = new TranslateTransition(Duration.millis(100), box);
+
 
         if(didCollide) {
             model.getChildren()
                     .stream()
                     .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper"))
                     .forEach(view -> {
-                        box.translateXProperty().set(view.getBoundsInParent().getCenterX());
-                        box.translateYProperty().set(view.getBoundsInParent().getCenterY()+GROUND_LEVEL);
-                        box.translateZProperty().set(view.getBoundsInParent().getCenterZ());
+                        boxMovement.setToX(view.getBoundsInParent().getCenterX());
+                        boxMovement.setToY(view.getBoundsInParent().getCenterY());
+                        boxMovement.setToZ(view.getBoundsInParent().getCenterZ());
+                        boxMovement.play();
                     });
         }
     }
@@ -361,7 +363,7 @@ public class Main extends Application {
         double movementTime;
 
         endPoint = GROUND_LEVEL - 3;
-        movementDistance = endPoint - box.getTranslateY();
+        movementDistance = Math.abs(endPoint - box.getTranslateY());
         movementTime = Math.sqrt(2*movementDistance*0.1/9.81); //jedna jednostka 10 cm
 
         final Timeline timeline = new Timeline();
@@ -371,7 +373,6 @@ public class Main extends Application {
         //timeline.setCycleCount(10); //test
         timeline.getKeyFrames().add(kf);
         timeline.play();
-
     }
 
 
