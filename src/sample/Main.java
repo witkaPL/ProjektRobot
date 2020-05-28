@@ -42,14 +42,15 @@ public class Main extends Application {
     private final Rotate rotationCloseOpenR = new Rotate(0, axisOpenClose);
 
     private final Box box = new Box(5, 5, 5);
+    private final Box ground = new Box(500, 2, 500);
 
-    private boolean didCollide = false;
+    private boolean didCollideWithBox = false;
+    private boolean didCollideWithGround = false;
+
 
     @Override
     public void start(Stage primaryStage) {
 
-
-        Box ground = new Box(500, 2, 500);
 
         //wczytanie modelu robota
         Group model = loadModel(getClass().getResource("OBJ_Robot.obj"));
@@ -146,34 +147,48 @@ public class Main extends Application {
                     moveBox(model);
                     break;
                 case UP:
-                    //if(rotationUpDown.getAngle()<20)
-                    rotateRobotUpDown(model, 5);
-                    moveBox(model);
+                    if(rotationUpDown.getAngle()<105 && !didCollideWithGround) {
+                        rotateRobotUpDown(model, 5);
+                        moveBox(model);
+                        checkCollisionWithGround(model);
+                    }
                     break;
                 case DOWN:
-                    //if(rotationUpDown.getAngle()>-70)
-                    rotateRobotUpDown(model, -5);
-                    moveBox(model);
+                    if(rotationUpDown.getAngle()>-70) {
+                        rotateRobotUpDown(model, -5);
+                        moveBox(model);
+                        checkCollisionWithGround(model);
+                    }
                     break;
                 case W:
-                    rotateRobotUpDownPivot2(model, 5);
-                    moveBox(model);
+                    if(rotationUpDownPivot2.getAngle()<5 && !didCollideWithGround) {
+                        rotateRobotUpDownPivot2(model, 5);
+                        moveBox(model);
+                        checkCollisionWithGround(model);
+                    }
                     break;
                 case S:
-                    rotateRobotUpDownPivot2(model, -5);
-                    moveBox(model);
+                    if(rotationUpDownPivot2.getAngle()>-108) {
+                        rotateRobotUpDownPivot2(model, -5);
+                        moveBox(model);
+                        checkCollisionWithGround(model);
+                    }
                     break;
                 case A:
-                    rotateGripperCloseOpenL(model, 5);
-                    rotateGripperCloseOpenR(model, -5);
-                    moveBox(model);
-                    checkCollision(model);
+                    if(rotationCloseOpenL.getAngle()<5) {
+                        rotateGripperCloseOpenL(model, 5);
+                        rotateGripperCloseOpenR(model, -5);
+                        moveBox(model);
+                        checkCollision(model);
+                    }
                     break;
                 case D:
-                    rotateGripperCloseOpenL(model, -5);
-                    rotateGripperCloseOpenR(model, 5);
-                    moveBox(model);
-                    checkCollision(model);
+                    if(rotationCloseOpenL.getAngle()>-75) {
+                        rotateGripperCloseOpenL(model, -5);
+                        rotateGripperCloseOpenR(model, 5);
+                        moveBox(model);
+                        checkCollision(model);
+                    }
                     break;
             }
         });
@@ -322,18 +337,31 @@ public class Main extends Application {
 
     private void checkCollision(Group model) {
 
+        //sprawdzanie kolizji z pudełkiem
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper"))
                 .forEach(view -> {
                     if(box.getBoundsInParent().intersects(view.getBoundsInParent())) {
                        //System.out.println("YEP!");
-                        didCollide = true;
+                        didCollideWithBox = true;
                     }
                     else {
                         gravityAnimation(box);
-                        didCollide = false;
+                        didCollideWithBox = false;
                     }
+                });
+    }
+
+    private void checkCollisionWithGround(Group model) {
+
+        //sprawdzanie kolizji z ziemią
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper"))
+                .forEach(view -> {
+                    //System.out.println("YEP!");
+                    didCollideWithGround = view.getBoundsInParent().getMaxY() > GROUND_LEVEL - 5;
                 });
     }
 
@@ -341,14 +369,13 @@ public class Main extends Application {
 
         TranslateTransition boxMovement = new TranslateTransition(Duration.millis(100), box);
 
-
-        if(didCollide) {
+        if(didCollideWithBox) {
             model.getChildren()
                     .stream()
-                    .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper"))
+                    .filter(view -> view.getId().equals("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_base"))
                     .forEach(view -> {
                         boxMovement.setToX(view.getBoundsInParent().getCenterX());
-                        boxMovement.setToY(view.getBoundsInParent().getCenterY());
+                        boxMovement.setToY(view.getBoundsInParent().getCenterY()+box.getHeight());
                         boxMovement.setToZ(view.getBoundsInParent().getCenterZ());
                         boxMovement.play();
                     });
