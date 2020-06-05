@@ -1,6 +1,7 @@
 package sample;
 
 import javafx.application.Application;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.transform.*;
@@ -16,15 +17,19 @@ import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
 import javafx.util.Duration;
 import java.lang.Math;
 import java.net.URL;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.control.*;
+import javafx.scene.text.Text;
 
 
 public class Main extends Application {
 
-    private static final int WIDTH = 1400;
+    private static final int WIDTH = 1200;
     private static final int HEIGHT = 800;
     private static final double GROUND_LEVEL = 50;
 
     final PhongMaterial redMaterial = new PhongMaterial();
+    final PhongMaterial greyMaterial = new PhongMaterial();
 
     private double anchorX;
     private double anchorAngleY = 0;
@@ -41,7 +46,7 @@ public class Main extends Application {
     private final Rotate rotationCloseOpenL = new Rotate(0, axisOpenClose);
     private final Rotate rotationCloseOpenR = new Rotate(0, axisOpenClose);
 
-    private final double[] savedPositionArray = {0, 0, 0, 0, 0};
+    private final double[] savedPositionArray = {0.001, 0.001, 0.001, 0.001, 0.001};
 
     private final Box box = new Box(5, 5, 5);
     private final Box ground = new Box(500, 2, 500);
@@ -59,13 +64,30 @@ public class Main extends Application {
         redMaterial.setSpecularColor(Color.ORANGE);
         redMaterial.setDiffuseColor(Color.RED);
 
+        greyMaterial.setSpecularColor(Color.DARKGRAY);
+        greyMaterial.setDiffuseColor(Color.GRAY);
+
         Group group = new Group();
         group.getChildren().add(model);
         group.getChildren().add(ground);
         group.getChildren().add(box);
 
+        //światło
+        PointLight light1 = new PointLight();
+        light1.setColor(Color.ORANGERED);
+        light1.getTransforms().add(new Translate(500,-200,500));
+
+        PointLight light2 = new PointLight();
+        light2.setColor(Color.LIGHTSKYBLUE);
+        light2.getTransforms().add(new Translate(-500,-200,-500));
+
+        group.getChildren().add(light1);
+        group.getChildren().add(light2);
+
+
+        //kamera
         Camera camera = new PerspectiveCamera(true);
-        Scene scene = new Scene(group,WIDTH, HEIGHT, true, SceneAntialiasing.BALANCED);
+        SubScene scene= new SubScene(group, WIDTH, HEIGHT, true, SceneAntialiasing.BALANCED);
         scene.setFill(Color.SILVER);
         scene.setCamera(camera);
 
@@ -79,17 +101,48 @@ public class Main extends Application {
         //pozycja poziomu ziemi
         ground.translateXProperty().set(0);
         ground.translateYProperty().set(GROUND_LEVEL);
+        ground.setMaterial(greyMaterial);
         ground.translateZProperty().set(0);
+
+        //2D GUI
+        BorderPane pane = new BorderPane();
+        pane.setCenter(scene);
+        Text instructionText = new Text();
+        instructionText.setText("Sterowanie: \n ← →: obór lewo prawo \n ↑ ↓: obrót góra dół \n W S: obrót góra dół \n A D: otwieranie zamykanie chwytaka");
+
+        Button saveButton = new Button("Zapisz pozycję");
+        Button moveButton = new Button("Odtwórz pozycję");
+
+        Text savedPositionText = new Text();
+        savedPositionText.setText("\n Zapisana pozycja:" +
+                            "\n Lewo prawo: " +  String.format("%.2f", savedPositionArray[0]) +
+                            "\n Góra dół (punkt1): " + String.format("%.2f", savedPositionArray[1]) +
+                            "\n Góra dół (punkt1): "+ String.format("%.2f", savedPositionArray[2]) +
+                            "\n Chwytak: " + String.format("%.2f", savedPositionArray[3]));
+
+        Text currentPositionText = new Text();
+        updateText(currentPositionText);
+
+        ToolBar toolBar = new ToolBar(instructionText, saveButton, moveButton, savedPositionText, currentPositionText);
+        toolBar.setOrientation(Orientation.VERTICAL);
+        toolBar.setMinWidth(200);
+        pane.setRight(toolBar);
+        pane.setPrefSize(HEIGHT,WIDTH+200);
+        Scene sceneGUI = new Scene(pane);
+        group.requestFocus();
 
         //ustawienia kamery
         camera.setNearClip(1);
         camera.setFarClip(1000);
 
         //ruch i rotacja kamery
-        cameraControl(camera, scene);
+        cameraControl(camera, scene, group);
 
         //wejścia z klawiatury
-        keyboardInputHandler(scene, model);
+        keyboardInputHandler(scene, model, currentPositionText);
+
+        //obsługa przycisków
+        buttonHandler(saveButton, moveButton, model, savedPositionText, currentPositionText);
 
         //dokładna kolizja
         /*
@@ -101,7 +154,7 @@ public class Main extends Application {
          */
 
         primaryStage.setTitle("Ramię robota");
-        primaryStage.setScene(scene);
+        primaryStage.setScene(sceneGUI);
         primaryStage.show();
     }
 
@@ -115,13 +168,14 @@ public class Main extends Application {
             view.translateXProperty().set(0);
             view.translateYProperty().set(GROUND_LEVEL);
             view.translateZProperty().set(0);
+            view.setMaterial(greyMaterial);
             modelRoot.getChildren().add(view);
         }
 
         return modelRoot;
     }
 
-    private void cameraControl(Camera camera, Scene scene) {
+    private void cameraControl(Camera camera, SubScene scene, Group group) {
 
         Translate pivot = new Translate();
         Rotate yRotate = new Rotate(0, Rotate.Y_AXIS);
@@ -140,7 +194,10 @@ public class Main extends Application {
             anchorAngleY = angleY.get();
         });
 
-        scene.setOnMouseDragged(event -> angleY.set(anchorAngleY + anchorX - event.getSceneX()));
+        scene.setOnMouseDragged(event -> {
+            group.requestFocus();
+            angleY.set(anchorAngleY + anchorX - event.getSceneX());
+        });
 
     }
 
@@ -161,23 +218,43 @@ public class Main extends Application {
 
      */
 
-    private void keyboardInputHandler(Scene scene, Group model) {
+    private void buttonHandler(Button saveButton, Button moveButton, Group model, Text savedPositionText,Text currentPositionText) {
+
+        saveButton.setOnAction(event -> {
+            savePosition();
+            savedPositionText.setText("\n Zapisana pozycja:" +
+                    "\n Lewo prawo: " +  String.format("%.2f", savedPositionArray[0]) +
+                    "\n Góra dół (punkt1): " + String.format("%.2f", savedPositionArray[1]) +
+                    "\n Góra dół (punkt1): "+ String.format("%.2f", savedPositionArray[2]) +
+                    "\n Chwytak: " + String.format("%.2f", savedPositionArray[3]));
+        });
+        moveButton.setOnAction(event -> {
+            moveToSavedPosition(model);
+            updateText(currentPositionText);
+        });
+
+    }
+
+    private void keyboardInputHandler(SubScene scene, Group model, Text currentPositionText) {
 
         scene.setOnKeyPressed(event -> {
             switch (event.getCode()) {
                 case LEFT:
                     rotateRobotLeftRight(model, -5);
                     moveBox(model);
+                    updateText(currentPositionText);
                     break;
                 case RIGHT:
                     rotateRobotLeftRight(model, 5);
                     moveBox(model);
+                    updateText(currentPositionText);
                     break;
                 case UP:
                     if(rotationUpDown.getAngle()<105 && !didCollideWithGround) {
                         rotateRobotUpDown(model, 5);
                         moveBox(model);
                         checkCollisionWithGround(model);
+                        updateText(currentPositionText);
                     }
                     break;
                 case DOWN:
@@ -192,6 +269,7 @@ public class Main extends Application {
                         rotateRobotUpDownPivot2(model, 5);
                         moveBox(model);
                         checkCollisionWithGround(model);
+                        updateText(currentPositionText);
                     }
                     break;
                 case S:
@@ -199,6 +277,7 @@ public class Main extends Application {
                         rotateRobotUpDownPivot2(model, -5);
                         moveBox(model);
                         checkCollisionWithGround(model);
+                        updateText(currentPositionText);
                     }
                     break;
                 case A:
@@ -207,6 +286,7 @@ public class Main extends Application {
                         rotateGripperCloseOpenR(model, -5);
                         moveBox(model);
                         checkCollision(model);
+                        updateText(currentPositionText);
                     }
                     break;
                 case D:
@@ -215,13 +295,9 @@ public class Main extends Application {
                         rotateGripperCloseOpenR(model, 5);
                         moveBox(model);
                         checkCollision(model);
+                        updateText(currentPositionText);
                     }
                     break;
-                case X:
-                    savePosition();
-                    break;
-                case Z:
-                    moveToSavedPosition(model);
             }
         });
 
@@ -506,12 +582,6 @@ public class Main extends Application {
         savedPositionArray[3] = rotationCloseOpenL.getAngle();
         savedPositionArray[4] = rotationCloseOpenR.getAngle();
 
-        /*
-        for(int i=0; i<savedPositionArray.length; i++) {
-            System.out.println(savedPositionArray[i]);
-        }
-        */
-
     }
 
     private void moveToSavedPosition(Group model) {
@@ -521,6 +591,14 @@ public class Main extends Application {
         rotateRobotUpDownPivot2(model, 0);
         rotateGripperCloseOpenL(model, 0);
         rotateGripperCloseOpenR(model, 0);
+    }
+
+    private void updateText(Text currentPositionText) {
+        currentPositionText.setText("\n Obecna pozycja:" +
+                "\n Lewo prawo: " +  String.format("%.2f", rotationLeftRight.getAngle()) +
+                "\n Góra dół (punkt1): " + String.format("%.2f", rotationUpDown.getAngle()) +
+                "\n Góra dół (punkt1): "+ String.format("%.2f", rotationUpDownPivot2.getAngle()) +
+                "\n Chwytak: " + String.format("%.2f", rotationCloseOpenL.getAngle()));
     }
 
     public static void main(String[] args) {
