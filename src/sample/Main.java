@@ -41,16 +41,17 @@ public class Main extends Application {
     private final Rotate rotationCloseOpenL = new Rotate(0, axisOpenClose);
     private final Rotate rotationCloseOpenR = new Rotate(0, axisOpenClose);
 
+    private final double[] savedPositionArray = {0, 0, 0, 0, 0};
+
     private final Box box = new Box(5, 5, 5);
     private final Box ground = new Box(500, 2, 500);
+    //private final Box collisionBox1 = new Box(1, 5, 1);
 
     private boolean didCollideWithBox = false;
     private boolean didCollideWithGround = false;
 
-
     @Override
     public void start(Stage primaryStage) {
-
 
         //wczytanie modelu robota
         Group model = loadModel(getClass().getResource("OBJ_Robot.obj"));
@@ -71,7 +72,7 @@ public class Main extends Application {
         //ustawienia pudełka (pozycja i kolor)
         box.translateXProperty().set(0);
         box.translateYProperty().set(GROUND_LEVEL-4);
-        box.translateZProperty().set(0);
+        box.translateZProperty().set(-30);
         box.setMaterial(redMaterial);
         box.setManaged(false);
 
@@ -89,6 +90,15 @@ public class Main extends Application {
 
         //wejścia z klawiatury
         keyboardInputHandler(scene, model);
+
+        //dokładna kolizja
+        /*
+        collisionBox1.getTransforms().setAll(model.getTransforms());
+        collisionBox1.setMaterial(redMaterial);
+        group.getChildren().add(collisionBox1);
+        setUpCollisionBoxes(model);
+
+         */
 
         primaryStage.setTitle("Ramię robota");
         primaryStage.setScene(scene);
@@ -133,6 +143,23 @@ public class Main extends Application {
         scene.setOnMouseDragged(event -> angleY.set(anchorAngleY + anchorX - event.getSceneX()));
 
     }
+
+    /*
+    private void setUpCollisionBoxes(Group model) {
+        model.getChildren()
+                .stream()
+                .filter(view -> view.getId().equals("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_R"))
+                .forEach(view -> {
+                    collisionBox1.relocate(view.getBoundsInParent().getCenterX(), view.getBoundsInParent().getCenterY());
+
+                    //collisionBox1.translateXProperty().set(view.getBoundsInParent().getCenterX());
+                    //collisionBox1.translateYProperty().set(view.getBoundsInParent().getCenterY());
+                    //collisionBox1.translateZProperty().set(view.getBoundsInParent().getCenterZ());
+
+                });
+    }
+
+     */
 
     private void keyboardInputHandler(Scene scene, Group model) {
 
@@ -190,6 +217,11 @@ public class Main extends Application {
                         checkCollision(model);
                     }
                     break;
+                case X:
+                    savePosition();
+                    break;
+                case Z:
+                    moveToSavedPosition(model);
             }
         });
 
@@ -201,6 +233,19 @@ public class Main extends Application {
         rotationLeftRight.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
         rotationLeftRight.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
 
+        //wartość końcowa rotacji
+        double endRotationValue;
+        double time;
+        //sprawdzanie czy funkcja została wywołana przez klawisze do obrotu, czy aby odtworzyć zachowaną pozycje (direction = 0)
+        if(direction!=0) {
+            endRotationValue = rotationLeftRight.getAngle() + direction;
+            time = 0.1;
+        }
+        else {
+            endRotationValue = savedPositionArray[0];
+            time = Math.abs(savedPositionArray[0])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+        }
+
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_"))
@@ -210,9 +255,10 @@ public class Main extends Application {
                     view.getTransforms().remove(rotationLeftRight);
                     view.getTransforms().remove(rotationCloseOpenL);
                     view.getTransforms().remove(rotationCloseOpenR);
+                    //animacja ruchu
                     Timeline timeline = new Timeline();
-                    KeyValue kv = new KeyValue(rotationLeftRight.angleProperty(), rotationLeftRight.getAngle() + direction);
-                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    KeyValue kv = new KeyValue(rotationLeftRight.angleProperty(), endRotationValue);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(time), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
                     view.getTransforms().add(rotationLeftRight);
@@ -232,12 +278,24 @@ public class Main extends Application {
                 });
     }
 
-
     private void rotateRobotUpDown(Group model, int direction) {
 
         rotationUpDown.pivotXProperty().set(16.3); //ustawienie wartości X osi obrotu
         rotationUpDown.pivotYProperty().set(-25.8); //ustawienie wartości Y osi obrotu
         rotationUpDown.pivotZProperty().set(-18.55); //ustawienie wartości Z osi obrotu
+
+        //wartość końcowa rotacji
+        double endRotationValue;
+        double time; //czas trwania animacji
+        //sprawdzanie czy funkcja została wywołana przez klawisze do obrotu, czy aby odtworzyć zachowaną pozycje (direction = 0)
+        if(direction!=0) {
+            endRotationValue = rotationUpDown.getAngle() + direction;
+            time  = 0.1;
+        }
+        else {
+            endRotationValue = savedPositionArray[1];
+            time = Math.abs(savedPositionArray[1])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+        }
 
         model.getChildren()
                 .stream()
@@ -248,8 +306,8 @@ public class Main extends Application {
                     view.getTransforms().remove(rotationCloseOpenL);
                     view.getTransforms().remove(rotationCloseOpenR);
                     Timeline timeline = new Timeline();
-                    KeyValue kv = new KeyValue(rotationUpDown.angleProperty(), rotationUpDown.getAngle() + direction);
-                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    KeyValue kv = new KeyValue(rotationUpDown.angleProperty(), endRotationValue);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(time), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
                     view.getTransforms().add(rotationUpDown);
@@ -273,6 +331,19 @@ public class Main extends Application {
         rotationUpDownPivot2.pivotYProperty().set(-43.2); //ustawienie wartości Y osi obrotu
         rotationUpDownPivot2.pivotZProperty().set(-14.35); //ustawienie wartości Z osi obrotu
 
+        //wartość końcowa rotacji
+        double endRotationValue;
+        double time;
+        //sprawdzanie czy funkcja została wywołana przez klawisze do obrotu, czy aby odtworzyć zachowaną pozycje (direction = 0)
+        if(direction!=0) {
+            endRotationValue = rotationUpDownPivot2.getAngle() + direction;
+            time = 0.1;
+        }
+        else {
+            endRotationValue = savedPositionArray[2];
+            time = Math.abs(savedPositionArray[2])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+        }
+
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().startsWith("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_"))
@@ -281,8 +352,8 @@ public class Main extends Application {
                     view.getTransforms().remove(rotationCloseOpenL);
                     view.getTransforms().remove(rotationCloseOpenR);
                     Timeline timeline = new Timeline();
-                    KeyValue kv = new KeyValue(rotationUpDownPivot2.angleProperty(), rotationUpDownPivot2.getAngle() + direction);
-                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    KeyValue kv = new KeyValue(rotationUpDownPivot2.angleProperty(), endRotationValue);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(time), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
                     view.getTransforms().add(rotationUpDownPivot2);
@@ -301,14 +372,27 @@ public class Main extends Application {
         rotationCloseOpenL.pivotYProperty().set(-18.02); //ustawienie wartości Y osi obrotu
         rotationCloseOpenL.pivotZProperty().set(-38.91); //ustawienie wartości Z osi obrotu
 
+        //wartość końcowa rotacji
+        double endRotationValue;
+        double time;
+        //sprawdzanie czy funkcja została wywołana przez klawisze do obrotu, czy aby odtworzyć zachowaną pozycje (direction = 0)
+        if(direction!=0) {
+            endRotationValue = rotationCloseOpenL.getAngle() + direction;
+            time = 0.1;
+        }
+        else {
+            endRotationValue = savedPositionArray[3];
+            time = Math.abs(savedPositionArray[3])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+        }
+
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().equals("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_L"))
                 .forEach(view -> {
                     view.getTransforms().remove(rotationCloseOpenL);
                     Timeline timeline = new Timeline();
-                    KeyValue kv = new KeyValue(rotationCloseOpenL.angleProperty(), rotationCloseOpenL.getAngle() + direction);
-                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    KeyValue kv = new KeyValue(rotationCloseOpenL.angleProperty(), endRotationValue);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(time), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
                     view.getTransforms().add(rotationCloseOpenL);
@@ -321,14 +405,27 @@ public class Main extends Application {
         rotationCloseOpenR.pivotYProperty().set(-18.02); //ustawienie wartości Y osi obrotu
         rotationCloseOpenR.pivotZProperty().set(-38.91); //ustawienie wartości Z osi obrotu
 
+        //wartość końcowa rotacji
+        double endRotationValue;
+        double time;
+        //sprawdzanie czy funkcja została wywołana przez klawisze do obrotu, czy aby odtworzyć zachowaną pozycje (direction = 0)
+        if(direction!=0) {
+            endRotationValue = rotationCloseOpenR.getAngle() + direction;
+            time = 0.1;
+        }
+        else {
+            endRotationValue = savedPositionArray[4];
+            time = Math.abs(savedPositionArray[4])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+        }
+
         model.getChildren()
                 .stream()
                 .filter(view -> view.getId().equals("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_basegrasper_R"))
                 .forEach(view -> {
                     view.getTransforms().remove(rotationCloseOpenR);
                     Timeline timeline = new Timeline();
-                    KeyValue kv = new KeyValue(rotationCloseOpenR.angleProperty(), rotationCloseOpenR.getAngle() + direction);
-                    KeyFrame kf = new KeyFrame(Duration.seconds(0.1), kv);
+                    KeyValue kv = new KeyValue(rotationCloseOpenR.angleProperty(), endRotationValue);
+                    KeyFrame kf = new KeyFrame(Duration.seconds(time), kv);
                     timeline.getKeyFrames().add(kf);
                     timeline.play();
                     view.getTransforms().add(rotationCloseOpenR);
@@ -375,13 +472,12 @@ public class Main extends Application {
                     .filter(view -> view.getId().equals("Robot_Head__Axis_1_Arm_1__Axis_2_Arm_2__Axis_3_Arm_3__Axis_4_Joint__Axis_5_Grasper_base"))
                     .forEach(view -> {
                         boxMovement.setToX(view.getBoundsInParent().getCenterX());
-                        boxMovement.setToY(view.getBoundsInParent().getCenterY()+box.getHeight());
+                        boxMovement.setToY(view.getBoundsInParent().getCenterY()+1.5*box.getHeight());
                         boxMovement.setToZ(view.getBoundsInParent().getCenterZ());
                         boxMovement.play();
                     });
         }
     }
-
 
     private void gravityAnimation(Box box) {
 
@@ -402,6 +498,30 @@ public class Main extends Application {
         timeline.play();
     }
 
+    private void savePosition() {
+        //Przypisanie kolejnym elementom tablicy wartości poszczególnych rotacji
+        savedPositionArray[0] = rotationLeftRight.getAngle();
+        savedPositionArray[1] = rotationUpDown.getAngle();
+        savedPositionArray[2] = rotationUpDownPivot2.getAngle();
+        savedPositionArray[3] = rotationCloseOpenL.getAngle();
+        savedPositionArray[4] = rotationCloseOpenR.getAngle();
+
+        /*
+        for(int i=0; i<savedPositionArray.length; i++) {
+            System.out.println(savedPositionArray[i]);
+        }
+        */
+
+    }
+
+    private void moveToSavedPosition(Group model) {
+        //Przesunięcie robota do zapisanej pozycji
+        rotateRobotLeftRight(model, 0);
+        rotateRobotUpDown(model, 0);
+        rotateRobotUpDownPivot2(model, 0);
+        rotateGripperCloseOpenL(model, 0);
+        rotateGripperCloseOpenR(model, 0);
+    }
 
     public static void main(String[] args) {
         launch(args);
