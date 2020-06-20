@@ -4,6 +4,9 @@ import javafx.application.Application;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point3D;
 import javafx.scene.*;
+import javafx.scene.image.Image;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.Sphere;
 import javafx.scene.transform.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Box;
@@ -30,6 +33,7 @@ public class Main extends Application {
 
     final PhongMaterial redMaterial = new PhongMaterial();
     final PhongMaterial greyMaterial = new PhongMaterial();
+    final PhongMaterial greyMaterial2 = new PhongMaterial();
     final PhongMaterial transparentMaterial = new PhongMaterial();
 
     private double anchorX;
@@ -65,13 +69,17 @@ public class Main extends Application {
     public void start(Stage primaryStage) {
 
         //wczytanie modelu robota
+        //Model robota stworzony przez grabowyr, pobrany ze strony free3d.com, licencja do użytku osobistego
         Group model = loadModel(getClass().getResource("OBJ_Robot.obj"));
 
         redMaterial.setSpecularColor(Color.ORANGE);
-        redMaterial.setDiffuseColor(Color.RED);
+        redMaterial.setDiffuseColor(Color.DARKRED);
 
         greyMaterial.setSpecularColor(Color.DARKGRAY);
-        greyMaterial.setDiffuseColor(Color.GRAY);
+        greyMaterial.setDiffuseColor(Color.rgb(50,50,50));
+
+        greyMaterial2.setSpecularColor(Color.DARKGRAY);
+        greyMaterial2.setDiffuseColor(Color.rgb(70,70,70));
 
         transparentMaterial.setSpecularColor(Color.rgb(0, 0, 0, 0.0));
         transparentMaterial.setDiffuseColor(Color.rgb(0, 0, 0, 0.0));
@@ -93,10 +101,23 @@ public class Main extends Application {
         group.getChildren().add(light1);
         group.getChildren().add(light2);
 
+        AmbientLight light3 = new AmbientLight();
+        light3.setColor(Color.DARKGRAY);
+        group.getChildren().add(light3);
+
+        //Niebo
+        Sphere skySphere = new Sphere(700);
+        skySphere.setCullFace(CullFace.NONE);
+        PhongMaterial skyMaterial = new PhongMaterial();
+        //Zdjęcie nieba- blog.wolfire.com
+        skyMaterial.setDiffuseMap(new Image(getClass().getResource("sky.jpg").toExternalForm()));
+        skySphere.setMaterial(skyMaterial);
+        group.getChildren().add(skySphere);
+
         //kamera
         Camera camera = new PerspectiveCamera(true);
         SubScene scene= new SubScene(group, WIDTH, HEIGHT, true, SceneAntialiasing.BALANCED);
-        scene.setFill(Color.SILVER);
+        scene.setFill(Color.LIGHTGRAY);
         scene.setCamera(camera);
 
         //ustawienia pudełka (pozycja i kolor)
@@ -104,17 +125,18 @@ public class Main extends Application {
         box.translateYProperty().set(GROUND_LEVEL-box.getHeight());
         box.translateZProperty().set(10);
         box.setMaterial(redMaterial);
+        box.setRotationAxis(Rotate.Y_AXIS);
         box.setManaged(false);
 
         //pozycja poziomu ziemi
         ground.translateXProperty().set(0);
         ground.translateYProperty().set(GROUND_LEVEL);
-        ground.setMaterial(greyMaterial);
+        ground.setMaterial(greyMaterial2);
         ground.translateZProperty().set(0);
 
         //ustawienia kamery
         camera.setNearClip(1);
-        camera.setFarClip(1000);
+        camera.setFarClip(1500);
 
         //ruch i rotacja kamery
         cameraControl(camera, scene, group);
@@ -203,18 +225,41 @@ public class Main extends Application {
         Text currentPositionText = new Text();
         updateText(currentPositionText);
 
-        ToolBar toolBar = new ToolBar(instructionText, saveButton, moveButton, savedPositionText, currentPositionText);
+        Label rotateLRLabel = new Label("Lewo Prawo:");
+        TextField rotateLRField = new TextField();
+        rotateLRField.setText("0");
+
+        Label rotateUDLabel = new Label("Góra dół (punkt1) (-70, 105):");
+        TextField rotateUDField = new TextField();
+        rotateUDField.setText("0");
+
+        Label rotateUD2Label = new Label("Góra dół (punkt2) (-108, 5):");
+        TextField rotateUD2Field = new TextField();
+        rotateUD2Field.setText("0");
+
+        Label rotateGripperLabel = new Label("Chwytak: (-75, 5)");
+        TextField rotateGripperField = new TextField();
+        rotateGripperField.setText("0");
+
+        Button moveToTypedButton = new Button("Rusz do wpisanej pozycji");
+
+        ToolBar toolBar = new ToolBar(instructionText, saveButton, moveButton, savedPositionText, currentPositionText,
+                rotateLRLabel, rotateLRField, rotateUDLabel, rotateUDField, rotateUD2Label, rotateUD2Field,
+                rotateGripperLabel, rotateGripperField, moveToTypedButton);
         toolBar.setOrientation(Orientation.VERTICAL);
         toolBar.setMinWidth(200);
         pane.setRight(toolBar);
-        pane.setPrefSize(HEIGHT,WIDTH+200);
+        pane.setPrefSize(WIDTH+200, HEIGHT);
         Scene sceneGUI = new Scene(pane);
 
         //obsługa przycisków
         buttonHandler(saveButton, moveButton, model, savedPositionText, currentPositionText);
 
-        //wejścia z klawiatury
+        //wejścia z klawiatury do sterownia
         keyboardInputHandler(scene, model, currentPositionText);
+
+        //sterowanie przez wpisanie pozycji
+        inputTextHandler(rotateLRField, rotateUDField, rotateUD2Field, rotateGripperField, moveToTypedButton, model, currentPositionText);
 
         return sceneGUI;
     }
@@ -255,7 +300,7 @@ public class Main extends Application {
                 });
     }
 
-    private void buttonHandler(Button saveButton, Button moveButton, Group model, Text savedPositionText,Text currentPositionText) {
+    private void buttonHandler(Button saveButton, Button moveButton, Group model, Text savedPositionText, Text currentPositionText) {
 
         saveButton.setOnAction(event -> {
             savePosition();
@@ -270,6 +315,35 @@ public class Main extends Application {
             updateText(currentPositionText);
         });
 
+    }
+
+    private void inputTextHandler(TextField rotateLRField, TextField rotateUDField, TextField rotateUD2Field, TextField rotateGripperField,
+                                  Button moveToTypedButton, Group model, Text currentPositionText) {
+
+        moveToTypedButton.setOnAction(event -> {
+            try {
+                savedPositionArray[0] = Double.parseDouble(rotateLRField.getText());
+                //Kąt podany przez wpisanie musi być z odpowiedniego zakresu
+                if(Double.parseDouble(rotateUDField.getText())>-70 && Double.parseDouble(rotateUDField.getText())<105) {
+                    savedPositionArray[1] = Double.parseDouble(rotateUDField.getText());
+                }
+                if(Double.parseDouble(rotateUD2Field.getText())>-108 && Double.parseDouble(rotateUD2Field.getText())<5) {
+                    savedPositionArray[2] = Double.parseDouble(rotateUD2Field.getText());
+                }
+                if(Double.parseDouble(rotateGripperField.getText())>-75 && Double.parseDouble(rotateGripperField.getText())<5) {
+                    savedPositionArray[3] = Double.parseDouble(rotateGripperField.getText());
+                    savedPositionArray[4] = -Double.parseDouble(rotateGripperField.getText());
+                }
+                moveToSavedPosition(model);
+                updateText(currentPositionText);
+            } catch (NumberFormatException exception) {
+                savedPositionArray[0] = 0;
+                savedPositionArray[1] = 0;
+                savedPositionArray[2] = 0;
+                savedPositionArray[3] = 0;
+                savedPositionArray[4] = 0;
+            }
+        });
     }
 
     private void keyboardInputHandler(SubScene scene, Group model, Text currentPositionText) {
@@ -363,7 +437,7 @@ public class Main extends Application {
         }
         else {
             endRotationValue = savedPositionArray[0];
-            time = Math.abs(savedPositionArray[0])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+            time = Math.abs(savedPositionArray[0]-rotationLeftRight.getAngle())/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
         }
 
         model.getChildren()
@@ -415,7 +489,7 @@ public class Main extends Application {
         }
         else {
             endRotationValue = savedPositionArray[1];
-            time = Math.abs(savedPositionArray[1])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+            time = Math.abs(savedPositionArray[1]-rotationUpDown.getAngle())/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
         }
 
         model.getChildren()
@@ -463,7 +537,7 @@ public class Main extends Application {
         }
         else {
             endRotationValue = savedPositionArray[2];
-            time = Math.abs(savedPositionArray[2])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+            time = Math.abs(savedPositionArray[2]-rotationUpDownPivot2.getAngle())/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
         }
 
         model.getChildren()
@@ -505,7 +579,7 @@ public class Main extends Application {
         }
         else {
             endRotationValue = savedPositionArray[3];
-            time = Math.abs(savedPositionArray[3])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+            time = Math.abs(savedPositionArray[3]-rotationCloseOpenL.getAngle())/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
         }
 
         model.getChildren()
@@ -539,7 +613,7 @@ public class Main extends Application {
         }
         else {
             endRotationValue = savedPositionArray[4];
-            time = Math.abs(savedPositionArray[4])/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
+            time = Math.abs(savedPositionArray[4]-rotationCloseOpenR.getAngle())/5*0.1; //obliczenie czasu na obrót w przypadku odtworzenia zachowanej pozycji (to samo tempo)
         }
 
         model.getChildren()
@@ -596,6 +670,7 @@ public class Main extends Application {
                         boxMovement.setToX(view.getBoundsInParent().getCenterX());
                         boxMovement.setToY(view.getBoundsInParent().getCenterY()+1.5*box.getHeight());
                         boxMovement.setToZ(view.getBoundsInParent().getCenterZ());
+                        box.setRotate(rotationLeftRight.getAngle() - 50);
                         boxMovement.play();
                     });
         }
